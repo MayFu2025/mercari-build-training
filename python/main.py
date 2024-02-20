@@ -71,8 +71,16 @@ def get_items_list(filename='items.json'):
     return {"message": file_data}
 
 
+# (3-5) GET endpoint for /items/{item_id}
 @app.get("/items/{item_id}")
-
+def get_item_id(item_id: int):
+    with open('items.json', 'r') as file:
+        file_data = json.load(file)
+        items_list = file_data["items"]
+    if 0 < item_id <= len(items_list):
+        raise HTTPException(status_code=404, detail="Index out of range")
+    else:
+        return {"message": items_list[item_id-1]}
 
 
 @app.get("/image/{image_name}")
