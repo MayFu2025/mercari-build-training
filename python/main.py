@@ -21,10 +21,13 @@ app.add_middleware(
 )
 
 
+# GET endpoint
 @app.get("/")
 def root():
     return {"message": "Hello, world!"}
 
+
+# function to save given item into json file
 def save_json(new_item, filename='items.json'):
     if os.path.exists(filename):
         with open(filename, 'r+') as file:
@@ -36,6 +39,7 @@ def save_json(new_item, filename='items.json'):
         with open(filename, 'w') as file:
             json.dump({"items": [new_item]}, file, indent=4)
 
+# POST endpoint for /items
 @app.post("/items")
 def add_item(name: str = Form(...), category: str = Form(...)):
     item = {"name": name, "category":category}
@@ -44,6 +48,11 @@ def add_item(name: str = Form(...), category: str = Form(...)):
     return {"message": f"item received: {item}"}
 
 
+@app.get("/items")
+def get_list(filename='items.json'):
+    with open(filename, 'r') as file:
+        file.readlines()
+        file_data = json.loads(file)
 
 
 @app.get("/items/{item_id}")
