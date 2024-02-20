@@ -44,15 +44,16 @@ def save_json(new_item, filename='items.json'):
 def add_item(name: str = Form(...), category: str = Form(...)):
     item = {"name": name, "category":category}
     save_json(new_item=item)
-    logger.info(f"Receive item: {name}, {category}")
-    return {"message": f"item received: {item}"}
+    logger.info(f"Receive item: {name}")
+    return {"message": f"item received: {name}"}
 
 
+# GET endpoint for /items
 @app.get("/items")
-def get_list(filename='items.json'):
+def get_items_list(filename='items.json'):
     with open(filename, 'r') as file:
-        file.readlines()
-        file_data = json.loads(file)
+        file_data = json.load(file)
+    return {"message": file_data}
 
 
 @app.get("/items/{item_id}")
