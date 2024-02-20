@@ -50,12 +50,12 @@ def save_image(image_bytes, image_name):
 # POST endpoint for /items
 @app.post("/items")
 def add_item(name: str = Form(), category: str = Form(), image: UploadFile = File()):
-    # Save image to directory
+    # (3-4) Save image to directory
     image_bytes = image.file.read()
     image_name = f"{hashlib.sha256(image_bytes).hexdigest()}.jpg"
     save_image(image_bytes, image_name)
 
-    # Save item to json
+    # (3-2) Save item to json
     item = {"name": name, "category": category, "image_name": image_name}
     save_json(new_item=item)
 
@@ -63,7 +63,7 @@ def add_item(name: str = Form(), category: str = Form(), image: UploadFile = Fil
     return {"message": f"item received: {item}"}
 
 
-# GET endpoint for /items
+# (3-3) GET endpoint for /items
 @app.get("/items")
 def get_items_list(filename='items.json'):
     with open(filename, 'r') as file:
