@@ -59,7 +59,7 @@ def add_item(name: str = Form(), category: str = Form(), image: UploadFile = Fil
     item = {"name": name, "category": category, "image_name": image_name}
     save_json(new_item=item)
 
-    logger.info(f"Receive item: {name}, {category}, {image_name}")
+    logger.info(f"Received item: {name}, {category}, {image_name}")
     return {"message": f"item received: {item}"}
 
 
@@ -83,6 +83,7 @@ def get_item_id(item_id: int):
         return {"message": items_list[item_id-1]}
 
 
+# (3-6) Displaying Debug Log
 @app.get("/image/{image_name}")
 async def get_image(image_name):
     # Create image path
