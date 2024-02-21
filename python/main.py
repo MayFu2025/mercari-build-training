@@ -85,17 +85,16 @@ def get_items_list(filename='items.json'):
     return {"message": items}
 
 
-
 # (3-5) GET endpoint for /items/{item_id}
 @app.get("/items/{item_id}")
 def get_item_id(item_id: int):
     with open('items.json', 'r') as file:
         file_data = json.load(file)
         items_list = file_data["items"]
-    if 0 < item_id <= len(items_list):
-        raise HTTPException(status_code=404, detail="Index out of range")
+    if 0 <= item_id <= len(items_list):
+        return {"message": items_list[item_id]}
     else:
-        return {"message": items_list[item_id-1]}
+        raise HTTPException(status_code=404, detail="Index out of range")
 
 
 # (3-6) Displaying Debug Log
@@ -112,3 +111,11 @@ async def get_image(image_name):
         image = images / "default.jpg"
 
     return FileResponse(image)
+
+
+# (4-2) GET endpoint for /search
+@app.get("/search/search?keyword={keyword}")
+def get_search_results(keyword):
+    query = f'''SELECT * from items where name like "%{keyword}%"'''
+    results = db.search(query, multiple=True)
+
