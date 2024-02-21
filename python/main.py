@@ -6,6 +6,7 @@ from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 import hashlib
 import json
+from library import DatabaseWorker
 
 app = FastAPI()
 logger = logging.getLogger("uvicorn")
@@ -19,6 +20,8 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["*"],
 )
+
+db = DatabaseWorker('mercari.sqlite3')
 
 
 # GET endpoint
@@ -56,19 +59,31 @@ def add_item(name: str = Form(), category: str = Form(), image: UploadFile = Fil
     save_image(image_bytes, image_name)
 
     # (3-2) Save item to json
-    item = {"name": name, "category": category, "image_name": image_name}
-    save_json(new_item=item)
+    # item = {"name": name, "category": category, "image_name": image_name}
+    # save_json(new_item=item)
+    #
+    # logger.info(f"Received item: {name}, {category}, {image_name}")
+    # return {"message": f"item received: {item}"}
 
-    logger.info(f"Received item: {name}, {category}, {image_name}")
-    return {"message": f"item received: {item}"}
+    # (4-1) Save item to db
+    query = f"INSERT into items(name, category, image_name) values('{name}', '{category}', '{image_name}')"
+    db.run_query(query)
+    return {"message": f"item received: {name}"}
+
 
 
 # (3-3) GET endpoint for /items
 @app.get("/items")
 def get_items_list(filename='items.json'):
-    with open(filename, 'r') as file:
-        file_data = json.load(file)
-    return {"message": file_data}
+    # with open(filename, 'r') as file:
+    #     file_data = json.load(file)
+    # return {"message": file_data}
+
+    # (4-1) GET endpoint for /items
+    query = f'''SELECT * from items'''
+    items = db.search(query, multiple=True)
+    return {"message": items}
+
 
 
 # (3-5) GET endpoint for /items/{item_id}
