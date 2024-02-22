@@ -114,8 +114,12 @@ async def get_image(image_name):
 
 
 # (4-2) GET endpoint for /search
-@app.get("/search/search?keyword={keyword}")
-def get_search_results(keyword):
-    query = f'''SELECT * from items where name like "%{keyword}%"'''
+@app.get("/search")
+def get_search_results(keyword:str):
+    query = f"SELECT * from items where name LIKE '%{keyword}%'"
     results = db.search(query, multiple=True)
+    return {"items": results}
 
+# if __name__ == "__main__":
+#     import uvicorn
+#     uvicorn.run(app, host="127.0.0.1", port=9000)
