@@ -68,6 +68,7 @@ def add_item(name: str = Form(), category: str = Form(), image: UploadFile = Fil
     # (4-1) Save item to db
     query = f"INSERT into items(name, category, image_name) values('{name}', '{category}', '{image_name}')"
     db.run_query(query)
+    add_category(category)
     return {"message": f"item received: {name}"}
 
 
@@ -79,7 +80,7 @@ def get_items_list(filename='items.json'):
     #     file_data = json.load(file)
     # return {"message": file_data}
 
-    # (4-1) GET endpoint for /items
+    # (4-1) New GET endpoint for /items
     query = f'''SELECT * from items'''
     items = db.search(query, multiple=True)
     return {"message": items}
@@ -113,12 +114,47 @@ async def get_image(image_name):
     return FileResponse(image)
 
 
+# (4-1) Move json to db (Run once)
+# query = '''create table if not exists items(
+#     id integer primary key,
+#     name text,
+#     category text,
+#     image_name text)'''
+# db.run_query(query)
+#
+# with open('items.json', 'r') as file:
+#     item_list = json.load(file)["items"]
+#     for item in item_list:
+#         query = f"INSERT into items(name, category, image_name) values('{item['name']}', '{item['category']}', '{item['image_name']}')"
+#         db.run_query(query)
+
+
 # (4-2) GET endpoint for /search
 @app.get("/search")
 def get_search_results(keyword:str):
     query = f"SELECT * from items where name LIKE '%{keyword}%'"
     results = db.search(query, multiple=True)
     return {"items": results}
+
+
+# (4-3) Categories table
+# Run once
+# query = "create table if not exists categories(id integer primary key, name text unique)"
+# db.run_query(query)
+#
+# query = "select distinct category from items"
+# categories = db.search(query, multiple=True)
+# print(categories)
+# for category in categories:
+#     query = f"INSERT OR IGNORE into categories(name) values('{category[0]}')"
+#     db.run_query(query)
+
+def add_category(category):
+    query = f"INSERT OR IGNORE {category} into categories"
+    db.run_query(query)
+
+
+
 
 # if __name__ == "__main__":
 #     import uvicorn
