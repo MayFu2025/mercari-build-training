@@ -21,6 +21,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+FILENAME = 'items.json'
 db = DatabaseWorker('mercari.sqlite3')
 
 
@@ -30,20 +31,20 @@ def root():
     return {"message": "Hello, world!"}
 
 
-# function to save given item into json file
-def save_json(new_item, filename='items.json'):
-    if os.path.exists(filename):
-        with open(filename, 'r+') as file:
+# (3-2) Function to save given item into json file
+def save_json(new_item):
+    if os.path.exists(FILENAME):
+        with open(FILENAME, 'r+') as file:
             file_data = json.load(file)
             file_data["items"].append(new_item)
             file.seek(0)
             json.dump(file_data, file, indent=4)
     else:
-        with open(filename, 'w') as file:
+        with open(FILENAME, 'w') as file:
             json.dump({"items": [new_item]}, file, indent=4)
 
 
-# function to save given image into images file
+# (3-4) Function to save given image into images file
 def save_image(image_bytes, image_name):
     path = os.path.join("images", image_name)
     with open(path, "wb") as image:
@@ -66,22 +67,25 @@ def add_item(name: str = Form(), category: str = Form(), image: UploadFile = Fil
     # return {"message": f"item received: {item}"}
 
     # (4-1) Save item to db
-    query = f"INSERT into items(name, category, image_name) values('{name}', '{category}', '{image_name}')"
+    query = f'''INSERT or IGNORE into categories(name) values('{category}')'''
     db.run_query(query)
-    add_category(category)
+    query = f'''INSERT into items(name, category_id, image_name)
+                values('{name}', (select id from categories where name = '{category}'), '{image_name}')'''
+    db.run_query(query)
     return {"message": f"item received: {name}"}
-
 
 
 # (3-3) GET endpoint for /items
 @app.get("/items")
-def get_items_list(filename='items.json'):
-    # with open(filename, 'r') as file:
+def get_items_list():
+    # with open(FILENAME, 'r') as file:
     #     file_data = json.load(file)
     # return {"message": file_data}
 
     # (4-1) New GET endpoint for /items
-    query = f'''SELECT * from items'''
+    query = f'''SELECT items.name, categories.name, image_name
+                FROM items
+                INNER JOIN categories ON items.category_id = categories.id'''
     items = db.search(query, multiple=True)
     return {"message": items}
 
@@ -89,13 +93,15 @@ def get_items_list(filename='items.json'):
 # (3-5) GET endpoint for /items/{item_id}
 @app.get("/items/{item_id}")
 def get_item_id(item_id: int):
-    with open('items.json', 'r') as file:
-        file_data = json.load(file)
-        items_list = file_data["items"]
-    if 0 <= item_id <= len(items_list):
-        return {"message": items_list[item_id]}
+    query = f'''SELECT items.name, categories.name, image_name
+                FROM items
+                INNER JOIN categories ON items.category_id = categories.id
+                WHERE items.id = {item_id}'''
+    result = db.search(query)
+    if result is not None:
+        return {"message": result}
     else:
-        raise HTTPException(status_code=404, detail="Index out of range")
+        raise HTTPException(status_code=404, detail="Item not found")
 
 
 # (3-6) Displaying Debug Log
@@ -114,48 +120,38 @@ async def get_image(image_name):
     return FileResponse(image)
 
 
-# (4-1) Move json to db (Run once)
+# (4-2) GET endpoint for /search
+@app.get("/search")
+def get_search_results(keyword:str):
+    query = f'''SELECT items.name, categories.name, items.image_name 
+                FROM items 
+                INNER JOIN categories ON items.category_id = categories.id
+                WHERE items.name LIKE "%{keyword}%"'''
+    results = db.search(query, multiple=True)
+    if len(results) > 0:
+        return {"items": results}
+    else:
+        raise HTTPException(status_code=404, detail="Item not found")
+
+
+# (4-1(3)) Move json to db (Run once)
+# query = "create table if not exists categories(id integer primary key, name text unique)"
+# db.run_query(query)
+#
 # query = '''create table if not exists items(
 #     id integer primary key,
-#     name text,
-#     category text,
-#     image_name text)'''
+#     name text not null,
+#     category_id integer not null,
+#     image_name text not null,
+#     foreign key(category_id)
+#         references categories(id))'''
 # db.run_query(query)
 #
 # with open('items.json', 'r') as file:
 #     item_list = json.load(file)["items"]
 #     for item in item_list:
-#         query = f"INSERT into items(name, category, image_name) values('{item['name']}', '{item['category']}', '{item['image_name']}')"
+#         query = f'''INSERT or IGNORE into categories(name) values('{item["category"]}')'''
 #         db.run_query(query)
-
-
-# (4-2) GET endpoint for /search
-@app.get("/search")
-def get_search_results(keyword:str):
-    query = f"SELECT * from items where name LIKE '%{keyword}%'"
-    results = db.search(query, multiple=True)
-    return {"items": results}
-
-
-# (4-3) Categories table
-# Run once
-# query = "create table if not exists categories(id integer primary key, name text unique)"
-# db.run_query(query)
-#
-# query = "select distinct category from items"
-# categories = db.search(query, multiple=True)
-# print(categories)
-# for category in categories:
-#     query = f"INSERT OR IGNORE into categories(name) values('{category[0]}')"
-#     db.run_query(query)
-
-def add_category(category):
-    query = f"INSERT OR IGNORE {category} into categories"
-    db.run_query(query)
-
-
-
-
-# if __name__ == "__main__":
-#     import uvicorn
-#     uvicorn.run(app, host="127.0.0.1", port=9000)
+#         query = f'''INSERT into items(name, category_id, image_name)
+#                     values('{item["name"]}', (select id from categories where name = '{item["category"]}'), '{item["image_name"]}')'''
+#         db.run_query(query)
